@@ -1,9 +1,9 @@
-import {MyCustomPlugin} from '../../../lib/if-electricitymaps';
+import {ElectricityMaps} from '../../../lib/if-electricitymaps';
 
 describe('lib/my-custom-plugin: ', () => {
-  describe('MyCustomPlugin(): ', () => {
+  describe('ElectricityMaps(): ', () => {
     it('has metadata field.', () => {
-      const pluginInstance = MyCustomPlugin({});
+      const pluginInstance = ElectricityMaps({});
 
       expect(pluginInstance).toHaveProperty('metadata');
       expect(pluginInstance).toHaveProperty('execute');
@@ -13,7 +13,7 @@ describe('lib/my-custom-plugin: ', () => {
 
     describe('execute(): ', () => {
       it('applies logic on provided inputs array.', async () => {
-        const pluginInstance = MyCustomPlugin({});
+        const pluginInstance = ElectricityMaps({});
         const inputs = [{}];
 
         const response = await pluginInstance.execute(inputs, {});

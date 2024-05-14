@@ -1,5 +1,4 @@
 /* eslint-disable prettier/prettier */
-// import * as dotenv from 'dotenv';
 import * as dayjs from 'dayjs';
 import axios from 'axios';
 
@@ -73,8 +72,6 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
     }
 
     const execute = async (inputs: PluginParams[]): Promise<PluginParams[]> => {
-        // dotenv.config();
-        // const token = process.env.EMAPS_TOKEN;
         const token = globalConfig.token;
         if (!token) {
             throw new AuthorizationError(

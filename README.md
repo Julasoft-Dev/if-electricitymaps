@@ -1,10 +1,4 @@
-# if-plugin-template
-
-`if-plugin-template` is an environmental impact calculator template which exposes an API for [IF](https://github.com/Green-Software-Foundation/if) to retrieve energy and embodied carbon estimates.
-
-## Implementation
-
-Here can be implementation details of the plugin. For example which API is used, transformations and etc.
+# if-electricitymaps
 
 ## Usage
 
@@ -14,17 +8,33 @@ This is how you could run the model in Typescript:
 
 ```typescript
 async function runPlugin() {
-  const newModel = await new MyCustomPlugin().configure(params);
+  const newModel = await new ElectricityMaps().configure(params);
   const usage = await newModel.calculate([
     {
-      timestamp: '2021-01-01T00:00:00Z',
-      duration: '15s',
-      'cpu-util': 34,
+      timestamp: '2024-01-01T00:00:00Z',
+      duration: 86400
+      cloud/vendor: aws
+      cloud/instance-type: t4g.micro
+      location: us-east-1
+      geolocation: 38.8809212,-77.1845565
+      cloud/service: ec2
+      memory/utilization: 0
+      cpu/utilization: 0
+      energy: 0.022764583333333335
+      carbon-embodied: 28.534246575342465
     },
     {
-      timestamp: '2021-01-01T00:00:15Z',
-      duration: '15s',
-      'cpu-util': 12,
+      timestamp: '2024-01-01T00:00:15Z',
+      duration: 86400
+      cloud/vendor: aws
+      cloud/instance-type: t4g.micro
+      location: us-east-1
+      geolocation: 38.8809212,-77.1845565
+      cloud/service: ec2
+      memory/utilization: 0
+      cpu/utilization: 0
+      energy: 0.022764583333333335
+      carbon-embodied: 28.534246575342465
     },
   ]);
 
@@ -36,12 +46,15 @@ runPlugin();
 
 ## Testing model integration
 
-### Using local links
+### Install plugin
 
-For using locally developed model in `IF Framework` please follow these steps: 
+1. On the root level of a locally developed model run `npm run build`.
+2. Then use npm link to create a package that can be installed into IF: `npm link`.
+3. Now your plugin is ready to run in IF. First install your plugin by navigating to the if project folder and running:
+  
+  ``npm link if-electricitymaps``
 
-1. On the root level of a locally developed model run `npm link`, which will create global package. It uses `package.json` file's `name` field as a package name. Additionally name can be checked by running `npm ls -g --depth=0 --link=true`.
-2. Use the linked model in impl by specifying `name`, `method`, `path` in initialize models section. 
+4. Use the linked model in impl by specifying `name`, `method`, `path` in initialize models section. 
 
 ```yaml
 name: plugin-demo-link
@@ -49,26 +62,42 @@ description: loads plugin
 tags: null
 initialize:
   plugins:
-    my-custom-plugin:
-      method: MyCustomPlugin
-      path: "<name-field-from-package.json>"
+    if-electricitymaps:
+      method: ElectricityMaps
+      path: 'if-electricitymaps'
       global-config:
-        ...
+        token: "your token"
+  outputs: ['yaml']
+tree:
+  children:
+    vm: # Separate child and pipeline for VM (EC2)
+      pipeline:
+        - if-electricitymaps
+      inputs:
+        - timestamp: '2024-03-26T14:08:00.000Z'
+          duration: 86400
+          cloud/vendor: aws
+          cloud/instance-type: t4g.micro
+          location: us-east-1
+          geolocation: 38.8809212,-77.1845565  # IMPORTANT: format long,lat
+          cloud/service: ec2
+          memory/utilization: 0
+          cpu/utilization: 0
+          energy: 0.022764583333333335
+          carbon-embodied: 28.534246575342465
+          ...
 ...
 ```
 
 ### Using directly from Github
 
 You can simply push your model to the public Github repository and pass the path to it in your impl.
-For example, for a model saved in `github.com/my-repo/my-model` you can do the following:
-
-npm install your model: 
 
 ```
-npm install -g https://github.com/my-repo/my-model
+npm install -g https://github.com/Julasoft-Dev/if-electricitymaps
 ```
 
-Then, in your `impl`, provide the path in the model instantiation. You also need to specify which class the model instantiates. In this case you are using the `PluginInterface`, so you can specify `OutputModel`. 
+Then, in your `impl`, provide the path in the model instantiation. You also need to specify which class the model instantiates.
 
 ```yaml
 name: plugin-demo-git
@@ -76,13 +105,34 @@ description: loads plugin
 tags: null
 initialize:
   plugins:
-    my-custom-plugin:
-      method: MyCustomPlugin
-      path: https://github.com/my-repo/my-model
+    if-electricitymaps:
+      method: ElectricityMaps
+      path: https://github.com/Julasoft-Dev/if-electricitymaps
       global-config:
-        ...
+        token: "your token"
+  outputs: ['yaml']
+tree:
+  children:
+    vm: # Separate child and pipeline for VM (EC2)
+      pipeline:
+        - if-electricitymaps
+      inputs:
+        - timestamp: '2024-03-26T14:08:00.000Z'
+          duration: 86400
+          cloud/vendor: aws
+          cloud/instance-type: t4g.micro
+          location: us-east-1
+          geolocation: 38.8809212,-77.1845565  # IMPORTANT: format long,lat
+          cloud/service: ec2
+          memory/utilization: 0
+          cpu/utilization: 0
+          energy: 0.022764583333333335
+          carbon-embodied: 28.534246575342465
+          ...
 ...
 ```
+
+### Running the manifest
 
 Now, when you run the `manifest` using the IF CLI, it will load the model automatically. Run using:
 
