@@ -50,7 +50,7 @@ runPlugin();
 
 1. On the root level of a locally developed model run `npm run build`.
 2. Then use npm link to create a package that can be installed into IF: `npm link`.
-3. Now your plugin is ready to run in IF. First install your plugin by navigating to the if project folder and running:
+3. Now your plugin is ready to run in IF. First install your plugin by navigating to the IF project folder and run:
   
   ``npm link if-electricitymaps``
 
@@ -67,6 +67,7 @@ initialize:
       path: 'if-electricitymaps'
       global-config:
         token: "your token"
+        use_latest: true
   outputs: ['yaml']
 tree:
   children:
@@ -88,6 +89,10 @@ tree:
           ...
 ...
 ```
+
+NOTE: `use_latest` is used to define which endpoint must be called:
+- `use_latest = true` [default] -> use `/carbon-intensity/latest` (last hour information)
+- `use_latest = false` -> use `/carbon-intensity/past-range` (carbon intensity in a period of time)
 
 ### Using directly from Github
 
