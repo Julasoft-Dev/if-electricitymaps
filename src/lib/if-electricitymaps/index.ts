@@ -19,7 +19,7 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
 
     let authorizationHeader = '';
 
-    const get_carbon_intensity = async (longitude: number, latitude: number, start: dayjs.Dayjs, end: dayjs.Dayjs): Promise<KeyValuePair[]> => {
+    const get_carbon_intensity = async (longitude: number, latitude: number, start: dayjs.Dayjs, end: dayjs.Dayjs, use_latest: boolean): Promise<KeyValuePair[]> => {
         if (isNaN(latitude) || isNaN(longitude)) {
             throw new InputValidationError(
                 errorBuilder({
@@ -42,7 +42,13 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
                 })
             )
         }
-        const url = `${BASE_URL}/carbon-intensity/past-range`;
+        let url = '';
+        if (use_latest) {
+            url = `${BASE_URL}/carbon-intensity/latest`;
+        } else {
+            url = `${BASE_URL}/carbon-intensity/past-range`;
+        }
+
         return axios.get(
             url,
             {
@@ -51,8 +57,7 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
                     'auth-token': authorizationHeader,
                 }
             }
-        ).then(
-            (response: any) => {
+        ).then((response: any) => {
                 if (response.status !== 200) {
                     throw new APIRequestError(
                         errorBuilder({
@@ -60,13 +65,24 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
                         })
                     );
                 }
-                const data: KeyValuePair[] = response.data;
-                return data.map((carbon_intensity_data) => {
+
+                const data = response.data;
+
+                // Check if data is an array or an object
+                if (!use_latest) {
+                    return data.map((carbon_intensity_data: KeyValuePair) => {
+                        return {
+                            datetime: carbon_intensity_data.datetime,
+                            value: carbon_intensity_data.carbonIntensity,
+                        };
+                    });
+                } else {
+                    // Handle the case where data is a single object
                     return {
-                        datetime: carbon_intensity_data.datetime,
-                        value: carbon_intensity_data.carbonIntensity,
-                    }
-                })
+                        datetime: data.datetime,
+                        value: data.carbonIntensity,
+                    };
+                }
             }
         )
     }
@@ -82,8 +98,15 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
             );
         }
 
+        let use_latest = true;
+        if ('use_latest' in globalConfig){
+            use_latest = globalConfig.use_latest;
+        }
+
+
         authorizationHeader = `auth-token: ${token}`;
-        return inputs.map((model_param)=>{
+
+        return Promise.all(inputs.map(async (model_param) => {
             let unit = 'gCO2eq/kWh';
             let power_consumption = model_param.power_consumption;
             if (!model_param.power_consumption) {
@@ -96,10 +119,10 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
             const geolocation = model_param.geolocation.split(',');
             const longitude = geolocation[0];
             const latitude = geolocation[1];
-            const carbon_intensities = get_carbon_intensity(longitude, latitude, start, end);
+            const carbon_intensities: any = await get_carbon_intensity(longitude, latitude, start, end, use_latest);
 
             const hours = Math.floor(model_param.duration / 3600);
-            const blocs = [...Array(hours).keys()]
+            const blocs = [...Array(hours).keys()];
             // Calculate for each full hour the ratio of the hour that is in the bloc
             const hourly_ratios = blocs.map((hour) => {
                 // this is the first hourly bloc, the ratio is the time between the start and the next hour.
@@ -112,19 +135,22 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
                 }
                 return 1;
             });
+
             let total_carbon_intensity = 0;
-            carbon_intensities.then((test) =>
-                test.forEach(
-                (carbon_intensity:any, index:number)=>{
+            if (use_latest) {
+                total_carbon_intensity += carbon_intensities.value;
+            } else {
+                carbon_intensities.forEach((carbon_intensity: any, index: any) => {
                     total_carbon_intensity += carbon_intensity.value * hourly_ratios[index];
-                }
-            ));
+                });
+            }
+
             return {
                 ...model_param,
                 carbon_intensity: total_carbon_intensity * power_consumption,
                 unit: unit
-            }
-        });
+            };
+        }));
     }
 
     return {
