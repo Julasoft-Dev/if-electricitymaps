@@ -148,6 +148,7 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
             return {
                 ...model_param,
                 carbon_intensity: total_carbon_intensity * power_consumption,
+                'grid/carbon-intensity': total_carbon_intensity * power_consumption,
                 unit: unit
             };
         }));
