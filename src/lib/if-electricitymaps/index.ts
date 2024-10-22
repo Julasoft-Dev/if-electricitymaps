@@ -72,14 +72,22 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
                 if (!use_latest) {
                     return data.map((carbon_intensity_data: KeyValuePair) => {
                         return {
+                            zone: carbon_intensity_data.zone,
                             datetime: carbon_intensity_data.datetime,
+                            emission_factor_type: carbon_intensity_data.emissionFactorType,
+                            is_estimated: carbon_intensity_data.isEstimated,
+                            estimation_method: carbon_intensity_data.estimationMethod,
                             value: carbon_intensity_data.carbonIntensity,
                         };
                     });
                 } else {
                     // Handle the case where data is a single object
                     return {
+                        zone: data.zone,
                         datetime: data.datetime,
+                        emission_factor_type: data.emissionFactorType,
+                        is_estimated: data.isEstimated,
+                        estimation_method: data.estimationMethod,
                         value: data.carbonIntensity,
                     };
                 }
@@ -117,8 +125,8 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
             const end = start.add(model_param.duration, 'second');
 
             const geolocation = model_param.geolocation.split(',');
-            const longitude = geolocation[0];
-            const latitude = geolocation[1];
+            const latitude = geolocation[0];
+            const longitude = geolocation[1];
             const carbon_intensities: any = await get_carbon_intensity(longitude, latitude, start, end, use_latest);
 
             const hours = Math.floor(model_param.duration / 3600);
@@ -137,18 +145,38 @@ export const ElectricityMaps = (globalConfig: ConfigParams): PluginInterface => 
             });
 
             let total_carbon_intensity = 0;
+            let zone = '';
+            let emission_factor_type = '';
+            let is_estimated = true;
+            let estimation_method = '';
+
             if (use_latest) {
+                zone = carbon_intensities.zone;
+                emission_factor_type = carbon_intensities.emission_factor_type;
+                is_estimated = carbon_intensities.is_estimated;
+                estimation_method = carbon_intensities.estimation_method;
                 total_carbon_intensity += carbon_intensities.value;
             } else {
                 carbon_intensities.forEach((carbon_intensity: any, index: any) => {
+                    // As the zone is the same for each registry:
+                    if(zone === '') {
+                        zone = carbon_intensities.zone;
+                        emission_factor_type = carbon_intensities.emission_factor_type;
+                        is_estimated = carbon_intensities.is_estimated;
+                        estimation_method = carbon_intensities.estimation_method;
+                    }
                     total_carbon_intensity += carbon_intensity.value * hourly_ratios[index];
                 });
             }
 
             return {
                 ...model_param,
+                zone: zone,
+                emission_factor_type: emission_factor_type,
+                is_estimated: is_estimated,
+                estimation_method: estimation_method,
                 carbon_intensity: total_carbon_intensity * power_consumption,
-                'grid/carbon-intensity': total_carbon_intensity * power_consumption,
+                'grid/carbon-intensity': total_carbon_intensity * power_consumption, // used in the pipeline
                 unit: unit
             };
         }));
